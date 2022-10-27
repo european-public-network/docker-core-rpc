@@ -1,0 +1,54 @@
+version: '2'
+services:
+  parity:
+    image: parity/parity:v2.5.10-stable
+    container_name: parity_rpc
+    restart: always
+    user: root
+    command:
+      # uncomment the used chain
+      # --chain /parity/config/testcore.json
+      # --chain /parity/config/core.json
+      --jsonrpc-interface all
+      --nat "extip:[External IP]"
+      --no-ipc
+      --config /parity/config/parity.toml
+      --min-gas-price 200000000000
+      --no-secretstore
+      --no-secretstore-http
+    volumes:
+      - evan-network-chain:/root/.local/share/io.parity.ethereum/
+      - ./parity-rpc-config:/parity/config
+      # uncomment the used chain
+      # - ./testcore-config/testcore.json:/parity/config/testcore.json
+      # - ./core-config/core.json:/parity/config/core.json
+    ports:
+      - "30303:30303"
+      - "30303:30303/udp"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  nginx:
+    image: nginx:1.15.9-alpine
+    container_name: nginx_rpc
+    restart: always
+    command: /bin/sh -c "envsubst '$$SSL_DOMAIN' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
+    environment:
+      - SSL_DOMAIN=core.evan.network
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-config/ssl:/ssl
+      - ./nginx-config/nginx.template.conf:/etc/nginx/nginx.conf.template
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  evan-network-chain:
